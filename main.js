@@ -123,6 +123,25 @@ class GameScene extends Phaser.Scene {
       this
     );
 
+        // --- Hustle point: enter the ramp room when touched ---------------
+    this.hustlePoint = this.add.rectangle(
+      width - 80,
+      height - 200,
+      32,
+      32,
+      0x4fc3f7 // blue-ish
+    );
+    this.physics.add.existing(this.hustlePoint);
+    this.hustlePoint.body.setAllowGravity(false);
+
+    this.physics.add.overlap(
+      this.player,
+      this.hustlePoint,
+      this.enterRampRoom,
+      null,
+      this
+    );
+
     // Keyboard input
     this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -137,6 +156,9 @@ class GameScene extends Phaser.Scene {
   }
 
   handleCollect(player, collectible) {
+  
+ 
+
     // Remove collectible from the game
     collectible.destroy();
 
@@ -156,6 +178,10 @@ class GameScene extends Phaser.Scene {
         }
       )
       .setOrigin(0.5);
+  }
+enterRampRoom(player, hustlePoint) {
+    // Teleport to the ramp room scene
+    this.scene.start('RampScene');
   }
 
   update() {
@@ -249,6 +275,231 @@ class GameScene extends Phaser.Scene {
   }
 }
 
+// --- Ramp Scene --------------------------------------------------------
+class RampScene extends Phaser.Scene {
+  constructor() {
+    super('RampScene');
+  }
+
+  preload() {
+    // Load ramp images (your new art)
+    this.load.image('ramp_left', 'assets/ramp_left.png');
+    this.load.image('ramp_right', 'assets/ramp_right.png');
+    // Player frames (player1..5) are already loaded in GameScene,
+    // but that's OK – Phaser keeps them, so we don't need to reload them here.
+  }
+
+  create() {
+    const { width, height } = this.scale;
+
+    // Different background so the teleport feels real
+    this.cameras.main.setBackgroundColor('#102030');
+
+    // Title for the room
+    this.add
+      .text(width / 2, 40, 'Ramp Room', {
+        fontSize: '24px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    // Ground (same height as in GameScene)
+    const groundHeight = 60;
+    const ground = this.add.rectangle(
+      width / 2,
+      height - groundHeight / 2,
+      width,
+      groundHeight,
+      0x30343f
+    );
+    this.physics.add.existing(ground, true);
+
+    /* Old, unscalable code from ramps
+    // Left ramp sprite
+    const rampLeft = this.physics.add.staticImage(
+      width / 2 - 80,
+      height - groundHeight - 40,
+      'ramp_left'
+    );
+
+    // Right ramp sprite
+    const rampRight = this.physics.add.staticImage(
+      width / 2 + 80,
+      height - groundHeight - 40,
+      'ramp_right'
+    );
+    */
+    /*
+   // Left ramp
+const rampLeft = this.physics.add.staticSprite(
+  0, 
+  height - groundHeight, 
+  'ramp_left'
+)
+  .setOrigin(0, 1)       // anchor bottom-left
+  .setScale(1.6)         // adjust height/width
+  .refreshBody();
+
+// Right ramp
+const rampRight = this.physics.add.staticSprite(
+  width, 
+  height - groundHeight, 
+  'ramp_right'
+)
+  .setOrigin(1, 1)       // anchor bottom-right
+  .setScale(1.6)
+  .refreshBody();
+ 
+  */
+     // Draw ramps as background art (no physics for now)
+    const rampScale = 1.66; // try 1.6, 1.8, 2.0 as you like
+
+    const rampLeft = this.add
+      .image(0, height - groundHeight +105, 'ramp_left')
+      .setOrigin(0, 1) // bottom-left corner
+      .setScale(rampScale);
+
+    const rampRight = this.add
+      .image(width, height - groundHeight +105, 'ramp_right')
+      .setOrigin(1, 1) // bottom-right corner
+      .setScale(rampScale);
+
+    // Player – copy your GameScene player setup as closely as possible
+    this.player = this.physics.add.sprite(100, height - 150, 'player1');
+    this.player.setCollideWorldBounds(true);
+    this.player.setBounce(0);
+    this.player.body.setSize(this.player.width, this.player.height, true);
+
+    // Inertia & braking settings – same as in GameScene (adjust to match yours)
+    this.baseDragX = 400;
+    this.brakeDragX = 1400;
+    this.player.setDragX(this.baseDragX);
+    this.player.body.setMaxVelocity(350, 900);
+
+    this.isKicking = false;
+    this.isBraking = false;
+
+    // Collisions
+    this.physics.add.collider(this.player, ground);
+    //this.physics.add.collider(this.player, rampLeft);
+    //this.physics.add.collider(this.player, rampRight);
+
+    // Idle animation: reuse or recreate
+    if (!this.anims.exists('idle')) {
+      this.anims.create({
+        key: 'idle',
+        frames: [{ key: 'player1' }, { key: 'player2' }],
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
+    this.player.anims.play('idle');
+
+    // Input
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyEsc = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC
+    );
+
+    // Hint to go back
+    this.add
+      .text(width / 2, height - 40, 'Press ESC to return', {
+        fontSize: '14px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      })
+      .setOrigin(0.5);
+  }
+
+  update() {
+    const jumpSpeed = -420;
+    const accel = 800;
+
+    if (!this.player || !this.player.body) return;
+
+    // ESC: go back to main world
+    if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+      this.scene.start('GameScene');
+      return;
+    }
+
+    const body = this.player.body;
+    const onGround = body.blocked.down;
+    const velX = body.velocity.x;
+    const wasStandingStill = Math.abs(velX) < 20;
+
+    const left = this.cursors.left.isDown;
+    const right = this.cursors.right.isDown;
+    const down = this.cursors.down.isDown;
+    const upPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up);
+
+    // Kick detection (push from still)
+    if (
+      !this.isKicking &&
+      onGround &&
+      wasStandingStill &&
+      (left || right)
+    ) {
+      this.isKicking = true;
+      this.player.anims.stop();
+      this.player.setTexture('player3');
+
+      this.time.delayedCall(500, () => {
+        if (!this.player || !this.player.body) return;
+        this.isKicking = false;
+      });
+    }
+
+    // Braking (DOWN on ground)
+    if (onGround && down) {
+      this.isBraking = true;
+      this.player.setDragX(this.brakeDragX);
+    } else {
+      this.isBraking = false;
+      this.player.setDragX(this.baseDragX);
+    }
+
+    // Horizontal movement with inertia
+    if (down) {
+      this.player.setAccelerationX(0);
+    } else if (left) {
+      this.player.setAccelerationX(-accel);
+      this.player.flipX = true;
+    } else if (right) {
+      this.player.setAccelerationX(accel);
+      this.player.flipX = false;
+    } else {
+      this.player.setAccelerationX(0);
+    }
+
+    // Jump
+    if (onGround && upPressed) {
+      body.setVelocityY(jumpSpeed);
+    }
+
+    // Visual / animation state
+    const nowOnGround = body.blocked.down;
+    const velXNow = body.velocity.x;
+    const isStandingStillNow = Math.abs(velXNow) < 20;
+
+    if (!nowOnGround) {
+      this.player.anims.stop();
+      this.player.setTexture('player4'); // air
+    } else if (this.isBraking) {
+      this.player.anims.stop();
+      this.player.setTexture('player5'); // tail brake
+    } else if (this.isKicking) {
+      this.player.anims.stop();
+      this.player.setTexture('player3'); // push
+    } else if (isStandingStillNow) {
+      this.player.anims.play('idle', true);
+    } else {
+      this.player.anims.stop();
+      this.player.setTexture('player1'); // rolling
+    }
+  }
+}
+
+
 // --- Game Config ---------------------------------------------------------
 const config = {
   type: Phaser.AUTO,
@@ -263,7 +514,9 @@ const config = {
       debug: false,
     },
   },
-  scene: [TitleScene, GameScene],
+//  scene: [TitleScene, GameScene],
+scene: [TitleScene, GameScene, RampScene],
+
 };
 
 const game = new Phaser.Game(config);
