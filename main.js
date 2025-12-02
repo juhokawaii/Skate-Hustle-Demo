@@ -125,6 +125,10 @@ class TitleScene extends Phaser.Scene {
     // Ramp art for ramp room
     this.load.image('ramp_left', 'assets/ramp_left.png');
     this.load.image('ramp_right', 'assets/ramp_right.png');
+
+    // Title music
+    this.load.audio('mainMusic', 'assets/title.mp3');
+
   }
 
   create() {
@@ -212,6 +216,13 @@ class GameScene extends Phaser.Scene {
       idleThreshold: 20,
     });
 
+        // Background music for the main world
+    this.bgMusic = this.sound.add('mainMusic', {
+      volume: 1,
+      loop: true,
+    });
+    this.bgMusic.play();
+
     // Simple collectible
     this.collectible = this.add.rectangle(
       width - 120,
@@ -277,9 +288,14 @@ class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 
-  enterRampRoom(player, hustlePoint) {
+enterRampRoom(player, hustlePoint) {
+    if (this.bgMusic) {
+      this.bgMusic.stop();
+      this.bgMusic = null;
+    }
     this.scene.start('RampScene');
   }
+
 
   update() {
     if (this.playerController) {
@@ -317,8 +333,8 @@ class RampScene extends Phaser.Scene {
     this.physics.add.existing(ground, true);
 
     // Ramps as background art
-    const rampScale = 1.6; // adjust as you like
-    const rampY = height - groundHeight + 40; // move ramps slightly down
+    const rampScale = 1.67; // adjust as you like
+    const rampY = height - groundHeight + 110; // move ramps slightly down
 
     this.add
       .image(0, rampY, 'ramp_left')
