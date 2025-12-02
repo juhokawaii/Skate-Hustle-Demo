@@ -1,0 +1,10 @@
+# macOS junk
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# If you later add Node tooling
+node_modules/
+dist/
+
