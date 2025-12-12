@@ -268,15 +268,24 @@ class TitleScene extends Phaser.Scene {
 
     // Music
     this.load.audio('mainMusic', 'assets/title.mp3');
+    this.load.audio('rampMusic', 'assets/ramp.mp3');
 
-    // Ramps
+    // Grapics
     this.load.image('ramp_left', 'assets/ramp_left.png');
     this.load.image('ramp_right', 'assets/ramp_right.png');
+    this.load.image('titleBg', 'assets/background1.png');
+    this.load.image('gameBg', 'assets/background.png');
 
   }
 
   create() {
     const { width, height } = this.scale;
+
+this.add.image(width / 2, height / 2, 'titleBg')
+  .setOrigin(0.5)
+  .setDisplaySize(width, height);
+
+    /*const { width, height } = this.scale;
 
     this.add
       .text(width / 2, height / 2 - 40, 'Skate Hustle', {
@@ -303,7 +312,7 @@ class TitleScene extends Phaser.Scene {
         }
       )
       .setOrigin(0.5);
-
+    */
     this.input.keyboard.once('keydown-SPACE', () => {
       this.scene.start('GameScene');
     });
@@ -339,6 +348,16 @@ class GameScene extends Phaser.Scene {
 
 // Where should the wheels touch the ground visually?
 const WHEEL_LINE_Y = height - 120;      // tweak this up/down to taste
+
+// --- Background image ---------------------------------------------
+
+this.add.image(
+  width / 2,
+  WHEEL_LINE_Y,
+  'gameBg'
+)
+.setOrigin(0.5, 1)   // center horizontally, bottom-aligned
+.setDepth(-20);
 
 // How thick is the invisible physics slab under the wheels?
 const GROUND_THICKNESS = 40;
@@ -534,6 +553,16 @@ class RampScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#102030');
     this.matter.world.setBounds(0, 0, width, height);
 
+    const WHEEL_LINE_Y = height - 120;
+    this.add.image(
+  width / 2,
+  WHEEL_LINE_Y,
+  'gameBg'
+)
+.setOrigin(0.5, 1)
+.setDepth(-20);
+
+
     //-------------------------------------------------------
     // UI
     //-------------------------------------------------------
@@ -607,7 +636,7 @@ class RampScene extends Phaser.Scene {
     //-------------------------------------------------------
     // Debug draw (same data!)
     //-------------------------------------------------------
-    this.drawDebugSpline(this.rampPoints, this.bottomPoints);
+    //his.drawDebugSpline(this.rampPoints, this.bottomPoints);
 
     //-------------------------------------------------------
     // Player
@@ -642,6 +671,14 @@ class RampScene extends Phaser.Scene {
           this.player.onGroundContacts = Math.max(0, this.player.onGroundContacts - 1);
       }
     });
+// --- Ramp music --------------------------------------------------
+this.rampMusic = this.sound.add('rampMusic', {
+  volume: 1,
+  loop: true,
+});
+
+this.rampMusic.play();
+
 
     //-------------------------------------------------------
     // Footer
@@ -706,6 +743,11 @@ class RampScene extends Phaser.Scene {
   //---------------------------------------------------------
   update() {
     if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+      if (this.rampMusic) {
+        this.rampMusic.stop();
+        this.rampMusic = null;
+      }
+
       this.scene.start('GameScene');
       return;
     }
